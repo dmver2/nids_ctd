@@ -1,0 +1,11 @@
+##
+*.iml
+.gradle
+.idea
+gradle
+build
+out
+/gradlew
+/gradlew.bat
+/test-results/
+target
