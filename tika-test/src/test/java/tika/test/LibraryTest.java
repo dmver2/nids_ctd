@@ -3,6 +3,8 @@
  */
 package tika.test;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.reflect.ClassPath;
 import org.hamcrest.CoreMatchers;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,8 +53,7 @@ public class LibraryTest {
         return Optional.of(s).filter(a -> a.length() > 4).map(a -> a.substring(a.length() - 4))
                 .filter(b -> b.equalsIgnoreCase(".pdf")
                         || b.equalsIgnoreCase(".zip")
-                        || b.equalsIgnoreCase(".jar")
-                        || b.equalsIgnoreCase(".sym"))
+                        || b.equalsIgnoreCase(".jar"))
                 .isPresent();
     }
 
@@ -61,7 +63,8 @@ public class LibraryTest {
         // Paths.get(System.getenv("WINDIR") + "/system32"); // ;
         final BaseTester tester = new SuspiciousTester();
         walkFiles(rootPath, tester);
-        Assert.assertThat("Expected 0 - no fails", tester.getFailQty(), CoreMatchers.equalTo(0L));
+        Assert.assertThat("Expected non-zero tested files", tester.getQty(), CoreMatchers.not(0L));
+        Assert.assertThat(String.format("Expected 0 - no fails of %d files", tester.getFailQty()), tester.getFailQty(), CoreMatchers.equalTo(0L));
     }
 
     @Test
@@ -70,7 +73,28 @@ public class LibraryTest {
         // Paths.get(System.getenv("WINDIR") + "/system32"); // ;
         final BaseTester allowedDetector = new AllowedTester();
         walkFiles(rootPath, allowedDetector);
-        Assert.assertThat("Expected 0 - no fails", allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
+        Assert.assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
+        Assert.assertThat(String.format("Expected 0 - no fails of %d files", allowedDetector.getFailQty()), allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
+    }
+
+    @Test
+    public void testIsContentAllowedWhenAllRight() throws IOException {
+        final ImmutableSet<ClassPath.ResourceInfo> resources = ClassPath
+                .from(getClass().getClassLoader()).getResources();
+        final BaseTester allowedDetector = new AllowedTester();
+        resources.stream()
+                .filter(r -> r.getResourceName().startsWith("files/"))
+                .forEach(r -> {
+                    try (CloseableStream stream = new CloseableStream(Paths.get(r.url().toURI()),
+                            r.asByteSource().openBufferedStream())) {
+                        allowedDetector.accept(stream);
+                    } catch (final IOException | URISyntaxException iox) {
+                        LOGGER.error("FAIL DETECTING CONTENT", iox);
+                    }
+                });
+        Assert.assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
+        Assert.assertThat(String.format("Expected 0 - no fails of %d files",
+                allowedDetector.getFailQty()), allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
     }
 
     private void walkFiles(final Path rootPath, final BaseTester dtr) throws IOException {
@@ -91,24 +115,36 @@ public class LibraryTest {
 
     private abstract static class BaseTester {
         protected long failQty;
+        protected long qty;
 
         public abstract void accept(CloseableStream closeableStream) throws IOException;
 
         long getFailQty() {
             return failQty;
         }
+
+        public long getQty() {
+            return qty;
+        }
+
     }
 
     private static class AllowedTester extends BaseTester {
         @Override
         public void accept(CloseableStream closeableStream) throws IOException {
+            // deliberately bypass, because no definite mapping ext -> content-type
+            var p = closeableStream.path.toString();
+            if (p.endsWith(".dat") || p.endsWith(".sym")) {
+                return;
+            }
             final String mimeType = classUnderTest.detectMimeType(closeableStream.input);
             final boolean fAllowed = classUnderTest.isContentAllowed(mimeType);
             boolean fExtensionAllowed = isAllowedExt(closeableStream.path);
 
             final String msg = String.format("%s\t%s\t%s\t%s\t\t%s", closeableStream.path, mimeType, fAllowed,
                     fExtensionAllowed, (fAllowed == fExtensionAllowed) ? "OK" : "FAIL");
-            if(fAllowed == fExtensionAllowed) {
+            ++qty;
+            if (fAllowed == fExtensionAllowed) {
                 LOGGER.debug(msg);
             } else {
                 ++failQty;
@@ -126,7 +162,8 @@ public class LibraryTest {
 
             final String msg = String.format("%s\t%s\t%s\t%s\t\t%s", closeableStream.path, mimeType, fSuspicious,
                     fExtensionSuspicious, (fSuspicious == fExtensionSuspicious) ? "OK" : "FAIL");
-            if(fSuspicious == fExtensionSuspicious) {
+            ++qty;
+            if (fSuspicious == fExtensionSuspicious) {
                 LOGGER.debug(msg);
             } else {
                 ++failQty;
@@ -144,6 +181,12 @@ public class LibraryTest {
             this.path = path;
             this.input = Files.newInputStream(path, StandardOpenOption.READ);
         }
+
+        private CloseableStream(final Path path, final InputStream stream) throws IOException {
+            this.path = path;
+            this.input = stream;
+        }
+
 
         public void close() {
             try {
