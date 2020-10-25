@@ -3,6 +3,10 @@
  */
 package tika.test;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
@@ -10,20 +14,13 @@ import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.BodyContentHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
 
 public class Library {
     private static final String[] EXECUTABLE_TYPES = {"application/x-msdownload",
             "application/vnd.microsoft.portable-executable", "application/x-ms-installer",
             "application/x-elf", "application/x-sh", "text/x-perl", "text/x-python"};
-    private static final Logger LOGGER = LoggerFactory.getLogger(Library.class);
     private final Tika tika = new Tika();
 
     public boolean isContentSuspicious(String mimeType) throws IOException {

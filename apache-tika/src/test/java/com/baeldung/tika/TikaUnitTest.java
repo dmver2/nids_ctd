@@ -1,16 +1,17 @@
 package com.baeldung.tika;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.junit.jupiter.api.Test;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.junit.Test;
-import org.xml.sax.SAXException;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class TikaUnitTest {
     @Test
