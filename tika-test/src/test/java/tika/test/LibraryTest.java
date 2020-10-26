@@ -6,10 +6,10 @@ package tika.test;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.ClassPath;
 import org.hamcrest.CoreMatchers;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,17 +26,17 @@ import java.util.Optional;
 
 public class LibraryTest {
 
-    private static final String[] SUSPICIOS_EXTENSIONS = {".exe", ".dll", ".com", ".bat", ".sh", ".pl", ".js", ".vb",
+    private static final String[] SUSPICIOUS_EXTENSIONS = {".exe", ".dll", ".com", ".bat", ".sh", ".pl", ".js", ".vb",
             ".xlm", ".msi", ".sys", ".rll"};
     private static final Logger LOGGER = LoggerFactory.getLogger(LibraryTest.class);
     private static Library classUnderTest;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClazz() {
         classUnderTest = new Library();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClazz() {
         classUnderTest = null;
     }
@@ -44,7 +44,7 @@ public class LibraryTest {
     private static boolean isExecutableExt(final Path path) {
         final String s = path.toString();
         return Optional.of(s).filter(a -> a.length() > 4).map(a -> a.substring(a.length() - 4)).map(
-                a -> Arrays.stream(SUSPICIOS_EXTENSIONS).anyMatch(e -> e.equalsIgnoreCase(a))
+                a -> Arrays.stream(SUSPICIOUS_EXTENSIONS).anyMatch(e -> e.equalsIgnoreCase(a))
         ).filter(b -> b).isPresent();
     }
 
@@ -58,27 +58,27 @@ public class LibraryTest {
     }
 
     @Test
-    public void testIsContentSuspicious() throws IOException {
+    void testIsContentSuspicious() throws IOException {
         final Path rootPath = Paths.get(System.getProperty("java.home"));
         // Paths.get(System.getenv("WINDIR") + "/system32"); // ;
         final BaseTester tester = new SuspiciousTester();
         walkFiles(rootPath, tester);
-        Assert.assertThat("Expected non-zero tested files", tester.getQty(), CoreMatchers.not(0L));
-        Assert.assertThat(String.format("Expected 0 - no fails of %d files", tester.getFailQty()), tester.getFailQty(), CoreMatchers.equalTo(0L));
+        assertThat("Expected non-zero tested files", tester.getQty(), CoreMatchers.not(0L));
+        assertThat(String.format("Expected 0 - no fails of %d files", tester.getFailQty()), tester.getFailQty(), CoreMatchers.equalTo(0L));
     }
 
     @Test
-    public void testIsContentAllowed() throws IOException {
+    void testIsContentAllowed() throws IOException {
         final Path rootPath = Paths.get(System.getProperty("java.home"));
         // Paths.get(System.getenv("WINDIR") + "/system32"); // ;
         final BaseTester allowedDetector = new AllowedTester();
         walkFiles(rootPath, allowedDetector);
-        Assert.assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
-        Assert.assertThat(String.format("Expected 0 - no fails of %d files", allowedDetector.getFailQty()), allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
+        assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
+        assertThat(String.format("Expected 0 - no fails of %d files", allowedDetector.getFailQty()), allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
     }
 
     @Test
-    public void testIsContentAllowedWhenAllRight() throws IOException {
+    void testIsContentAllowedWhenAllRight() throws IOException {
         final ImmutableSet<ClassPath.ResourceInfo> resources = ClassPath
                 .from(getClass().getClassLoader()).getResources();
         final BaseTester allowedDetector = new AllowedTester();
@@ -92,8 +92,8 @@ public class LibraryTest {
                         LOGGER.error("FAIL DETECTING CONTENT", iox);
                     }
                 });
-        Assert.assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
-        Assert.assertThat(String.format("Expected 0 - no fails of %d files",
+        assertThat("Expected non-zero tested files", allowedDetector.getQty(), CoreMatchers.not(0L));
+        assertThat(String.format("Expected 0 - no fails of %d files",
                 allowedDetector.getFailQty()), allowedDetector.getFailQty(), CoreMatchers.equalTo(0L));
     }
 
