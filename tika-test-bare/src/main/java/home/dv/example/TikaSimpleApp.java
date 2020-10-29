@@ -22,11 +22,14 @@ public class TikaSimpleApp {
         allowed = new ArrayList<>(8);
         final TikaWrapper tikaWrapper = new TikaWrapper();
 
+        final Path rootPath = Paths.get("./target/classes/files");
         // newer do so: refer to resources directly
-        final Path rootPath = Paths.get("./src/main/resources");
-        Files.find(rootPath, 0x10, (path, basicFileAttributes) -> {
-            return Files.isRegularFile(path) && Files.isReadable(path);
-        }, FileVisitOption.FOLLOW_LINKS).forEach((path) -> {
+//        final Path rootPath = Paths.get("./src/main/resources/files");
+        Files.find(rootPath,
+                1,
+                (path, basicFileAttributes)
+                        -> Files.isRegularFile(path) && Files.isReadable(path),
+                FileVisitOption.FOLLOW_LINKS).forEach((path) -> {
             ++inQty;
             try (InputStream stream = Files.newInputStream(path)) {
                 final String mType = tikaWrapper.detectMimeType(stream);
